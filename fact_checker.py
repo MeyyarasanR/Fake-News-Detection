@@ -2,10 +2,7 @@ import os
 
 from dotenv import load_dotenv
 
-from google import genai
-
-from google.genai import types
-
+import google.generativeai as genai
 
 
 # =========================
@@ -29,14 +26,25 @@ if not api_key:
 
 
 # =========================
-# Gemini Client
+# Gemini Configure
 # =========================
 
-client = genai.Client(
+genai.configure(
 
     api_key=api_key
 
 )
+
+
+
+model = genai.GenerativeModel(
+
+    "gemini-1.5-flash"
+
+)
+
+
+
 
 
 
@@ -136,16 +144,9 @@ Never judge by writing style.
 
 Only verify the FACT.
 
-Always check:
-- person names
-- dates
-- positions
-- numbers
-- events
-
-
 
 Rules:
+
 
 Correct information:
 
@@ -163,7 +164,6 @@ STATUS: UNCERTAIN
 
 
 
-
 USER CLAIM:
 
 
@@ -172,8 +172,6 @@ USER CLAIM:
 {news}
 
 \"\"\"
-
-
 
 
 Reply only:
@@ -203,49 +201,24 @@ LATEST VERIFIED INFORMATION:
     try:
 
 
-        response = client.models.generate_content(
+        response = model.generate_content(
 
-
-            model=
-
-            "gemini-2.0-flash-lite",
-
-
-            contents=
 
             prompt,
 
 
-            config=types.GenerateContentConfig(
+            generation_config={
 
+                "temperature": 0.0
 
-                tools=[
-
-
-                    types.Tool(
-
-
-                        google_search=
-
-                        types.GoogleSearch()
-
-
-                    )
-
-
-                ],
-
-
-                temperature=0.0
-
-
-            )
+            }
 
 
         )
 
 
         return response.text
+
 
 
 
@@ -257,11 +230,18 @@ LATEST VERIFIED INFORMATION:
 
 
 
-        # =====================
-        # Quota limit handling
-        # =====================
 
-        if "429" in error_text or "RESOURCE_EXHAUSTED" in error_text:
+        # Gemini quota limit
+
+        if (
+
+            "429" in error_text
+
+            or
+
+            "RESOURCE_EXHAUSTED" in error_text
+
+        ):
 
 
             return """
@@ -277,7 +257,6 @@ Gemini API Limit
 EXPLANATION:
 Your Gemini free API request limit is finished.
 FactShield AI is working correctly.
-Try again after quota reset.
 
 
 CORRECT INFORMATION:
@@ -291,9 +270,6 @@ Gemini verification temporarily unavailable.
 
 
 
-        # =====================
-        # Other errors
-        # =====================
 
 
         return f"""
