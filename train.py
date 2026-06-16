@@ -7,8 +7,6 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, classification_report
 
 
@@ -19,7 +17,6 @@ def clean_text(text):
 
     text = text.lower()
 
-    # remove Reuters/source patterns
     text = re.sub(
         r'^.*?\b(reuters)\b\s*[-—–]+\s*',
         '',
@@ -27,21 +24,12 @@ def clean_text(text):
         flags=re.IGNORECASE
     )
 
-    # remove location prefixes
-    text = re.sub(
-        r'^[a-z\s]{3,20}\s*[-—–]+\s*',
-        '',
-        text
-    )
-
-    # keep alphabets only
     text = re.sub(
         r'[^a-zA-Z\s]',
         ' ',
         text
     )
 
-    # remove extra spaces
     text = re.sub(
         r'\s+',
         ' ',
@@ -54,10 +42,9 @@ def clean_text(text):
 
 def main():
 
-    print("=== Upgraded Fake News Detection Training ===")
+    print("=== Fake News Detection Training ===")
 
 
-    # Dataset paths
     fake_path = os.path.join(
         "dataset",
         "Fake.csv"
@@ -71,16 +58,12 @@ def main():
     custom_path = "custom_data.csv"
 
 
-
-    # check files
-
     if (
         not os.path.exists(fake_path)
         or not os.path.exists(true_path)
     ):
-        print("Dataset missing")
+        print("Dataset files missing")
         sys.exit(1)
-
 
 
     print("Loading datasets...")
@@ -91,22 +74,25 @@ def main():
     df_true = pd.read_csv(true_path)
 
 
+    df_fake["label"] = 1
 
-    # Your Indian updated news file
+    df_true["label"] = 0
+
+
 
     if os.path.exists(custom_path):
 
         df_custom = pd.read_csv(custom_path)
 
         print(
-            f"Loaded custom Indian news: {len(df_custom)}"
+            "Custom news loaded:",
+            len(df_custom)
         )
 
     else:
 
         df_custom = pd.DataFrame(
             columns=[
-                "title",
                 "text",
                 "label"
             ]
@@ -115,30 +101,20 @@ def main():
 
 
     print(
-        f"Fake news: {len(df_fake)}"
+        "Fake:",
+        len(df_fake)
     )
 
     print(
-        f"True news: {len(df_true)}"
+        "Real:",
+        len(df_true)
     )
 
 
+    if "title" not in df_custom.columns:
 
-    # labels
+        df_custom["title"] = ""
 
-    df_fake["label"] = 1
-
-    df_true["label"] = 0
-
-
-
-    # add empty title if missing
-
-    df_custom["title"] = ""
-
-
-
-    # combine all data
 
     df = pd.concat(
         [
@@ -150,7 +126,6 @@ def main():
     )
 
 
-
     df = df.dropna(
         subset=[
             "text",
@@ -160,32 +135,31 @@ def main():
 
 
     df["full_text"] = (
-        df["title"].astype(str)
-        + " "
-        + df["text"].astype(str)
-    )
 
+        df.get(
+            "title",
+            ""
+        ).astype(str)
+
+        + " "
+
+        + df["text"].astype(str)
+
+    )
 
 
     print("Cleaning text...")
 
 
     df["cleaned_text"] = (
+
         df["full_text"]
         .apply(clean_text)
+
     )
 
 
-    df = df[
-        df["cleaned_text"] != ""
-    ]
-
-
-
-    print("Splitting data...")
-
-
-    X_train, X_val, y_train, y_val = train_test_split(
+    X_train, X_test, y_train, y_test = train_test_split(
 
         df["cleaned_text"],
 
@@ -200,22 +174,26 @@ def main():
     )
 
 
-
     print(
-        "Training size:",
+        "Training data:",
         len(X_train)
     )
+
+
+    print("Creating TF-IDF...")
 
 
     vectorizer = TfidfVectorizer(
 
         stop_words="english",
 
-        max_df=0.7,
+        max_df=0.9,
 
-        ngram_range=(1,2),
+        min_df=2,
 
-        max_features=25000
+        ngram_range=(1,3),
+
+        max_features=50000
 
     )
 
@@ -225,111 +203,56 @@ def main():
     )
 
 
-    X_val_vec = vectorizer.transform(
-        X_val
+    X_test_vec = vectorizer.transform(
+        X_test
     )
 
 
-
-    models = {
-
-
-        "Logistic Regression":
-        LogisticRegression(
-            max_iter=1000,
-            random_state=42
-        ),
+    print("Training Logistic Regression...")
 
 
-        "Naive Bayes":
-        MultinomialNB(),
+    model = LogisticRegression(
+
+        max_iter=2000,
+
+        C=2,
+
+        random_state=42
+
+    )
 
 
-        "Random Forest":
-        RandomForestClassifier(
-
-            n_estimators=50,
-
-            max_depth=30,
-
-            random_state=42,
-
-            n_jobs=-1
-
-        )
-
-    }
+    model.fit(
+        X_train_vec,
+        y_train
+    )
 
 
-
-    best_model = None
-
-    best_name = ""
-
-    best_accuracy = 0
+    prediction = model.predict(
+        X_test_vec
+    )
 
 
-
-    print("\nTraining models...\n")
-
-
-
-    for name, model in models.items():
-
-        print(
-            "Training",
-            name
-        )
-
-
-        model.fit(
-            X_train_vec,
-            y_train
-        )
-
-
-        prediction = model.predict(
-            X_val_vec
-        )
-
-
-        accuracy = accuracy_score(
-            y_val,
-            prediction
-        )
-
-
-        print(
-            name,
-            ":",
-            round(
-                accuracy*100,
-                2
-            ),
-            "%"
-        )
-
-
-        if accuracy > best_accuracy:
-
-            best_accuracy = accuracy
-
-            best_model = model
-
-            best_name = name
-
+    accuracy = accuracy_score(
+        y_test,
+        prediction
+    )
 
 
     print(
-        "\nWinner:",
-        best_name
+        "Accuracy:",
+        round(
+            accuracy * 100,
+            2
+        ),
+        "%"
     )
 
 
     print(
         classification_report(
-            y_val,
-            best_model.predict(X_val_vec),
+            y_test,
+            prediction,
             target_names=[
                 "Real News",
                 "Fake News"
@@ -338,11 +261,8 @@ def main():
     )
 
 
-
-    # save model
-
     pickle.dump(
-        best_model,
+        model,
         open(
             "model.pkl",
             "wb"
@@ -359,9 +279,8 @@ def main():
     )
 
 
-
     print(
-        "\nSUCCESS: model.pkl and vector.pkl updated"
+        "SUCCESS: Updated model.pkl and vector.pkl"
     )
 
 

@@ -1,100 +1,510 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
+
     <meta charset="UTF-8">
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FactShield AI - Fake News Detector</title>
-    <!-- Google Fonts: Inter & Outfit -->
+
+
+    <title>
+        FactShield AI | Real-Time Fake News Detection
+    </title>
+
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
+
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
 </head>
+
+
+
+
 <body>
+
+
     <div class="background-decor">
+
         <div class="glow-sphere glow-1"></div>
+
         <div class="glow-sphere glow-2"></div>
+
     </div>
+
+
+
+
+
 
     <div class="app-container">
+
+
+
+
+
         <header>
+
+
             <div class="logo-area">
-                <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                    <path d="m9 12 2 2 4-4"/>
+
+
+                <svg class="logo-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2.5">
+
+
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+
+                    <path d="m9 12 2 2 4-4" />
+
+
                 </svg>
-                <span class="logo-text">FACT<span>SHIELD</span></span>
+
+
+
+
+                <span class="logo-text">
+
+                    FACT<span>SHIELD</span>
+
+                </span>
+
+
             </div>
-            <p class="subtitle">AI-powered misinformation detection system utilizing TF-IDF and Logistic Regression</p>
+
+
+
+
+            <p class="subtitle">
+
+                Real-time misinformation detection using
+                Machine Learning + Gemini AI verification
+
+            </p>
+
+
+
         </header>
 
+
+
+
+
+
+
+
+
         <main>
+
+
+
+
+
+
+
+            <!-- INPUT -->
+
+
             <section class="card glass-card input-card">
+
+
                 <div class="card-header">
-                    <h2>Analyze Article</h2>
-                    <p>Paste the full title and text of the article below to verify its integrity.</p>
+
+
+                    <h2>
+                        Verify News & Information
+                    </h2>
+
+
+                    <p>
+
+                        Analyze politics, health, science, technology,
+                        sports, education and viral claims.
+
+                    </p>
+
+
                 </div>
-                
-                <form id="analyze-form">
+
+
+
+
+
+
+
+                <form id="analyze-form" autocomplete="off">
+
+
                     <div class="textarea-wrapper">
-                        <textarea id="news-text" placeholder="Paste article content or headline here (at least 10 words for best results)..." required></textarea>
-                        <div class="char-count">0 characters</div>
+
+
+
+                        <textarea id="news-text" name="news-text" placeholder="Paste any news or claim here..."
+                            required></textarea>
+
+
+
+
+                        <div class="char-count">
+
+                            0 characters
+
+                        </div>
+
+
+
                     </div>
-                    
+
+
+
+
+
+
+
+
                     <div class="actions">
+
+
+
                         <button type="submit" id="submit-btn" class="btn btn-primary">
-                            <span>Analyze Content</span>
-                            <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="22" y1="2" x2="11" y2="13"></line>
-                                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                            </svg>
+
+
+                            <span>
+
+                                Analyze with AI
+
+                            </span>
+
+
                         </button>
-                        <button type="button" id="clear-btn" class="btn btn-secondary">Clear</button>
+
+
+
+
+
+                        <button type="button" id="clear-btn" class="btn btn-secondary">
+
+                            Clear
+
+                        </button>
+
+
+
                     </div>
+
+
                 </form>
+
+
+
             </section>
 
-            <!-- Results Section (Initially Hidden) -->
+
+
+
+
+
+
+
+
+
+
+
+            <!-- RESULT -->
+
+
             <section id="results-card" class="card glass-card result-card hidden">
+
+
+
+
+
                 <div class="loader-wrapper hidden" id="result-loader">
+
+
                     <div class="pulse-loader"></div>
-                    <p>Analyzing linguistic patterns and sources...</p>
+
+
+                    <p>
+
+                        Checking facts using AI verification system...
+
+                    </p>
+
+
                 </div>
+
+
+
+
+
+
+
+
 
                 <div class="result-content" id="result-content">
+
+
+
+
+
+
                     <div class="result-header">
-                        <h2>Analysis Complete</h2>
-                        <span id="prediction-badge" class="badge">REAL NEWS</span>
+
+
+                        <h2>
+
+                            Verification Result
+
+                        </h2>
+
+
+
+                        <span id="prediction-badge" class="badge">
+
+                            WAITING
+
+                        </span>
+
+
                     </div>
+
+
+
+
+
+
+
+
 
                     <div class="gauge-section">
+
+
                         <div class="gauge-info">
-                            <span class="gauge-label">Analysis Confidence</span>
-                            <span id="confidence-percentage" class="gauge-val">98.5%</span>
+
+
+                            <span class="gauge-label">
+
+                                AI Confidence Score
+
+                            </span>
+
+
+
+                            <span id="confidence-percentage" class="gauge-val">
+
+                                0%
+
+                            </span>
+
+
                         </div>
+
+
+
+
+
                         <div class="gauge-bar-bg">
-                            <div id="confidence-bar" class="gauge-bar-fill" style="width: 0%;"></div>
+
+
+                            <div id="confidence-bar" class="gauge-bar-fill" style="width:0%">
+
+
+                            </div>
+
+
                         </div>
+
+
+
                     </div>
+
+
+
+
+
+
+
+
 
                     <div class="report-box" id="report-box">
+
+
+
                         <div class="report-icon-wrapper">
-                            <svg id="report-icon" class="report-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+
+
+                            <svg id="report-icon" class="report-icon" xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+
+
+                            </svg>
+
+
                         </div>
+
+
+
+
+
+
+
+
+
                         <div class="report-text">
-                            <h4 id="report-title">Verdict Summary</h4>
-                            <p id="report-desc">Detailed feedback on the article content matches standards.</p>
+
+
+                            <h4 id="report-title">
+
+                                AI Fact Verification Report
+
+                            </h4>
+
+
+
+                            <p id="report-desc">
+
+                                Detailed AI explanation will appear here.
+
+                            </p>
+
+
+
+
+                            <button type="button" id="copy-report" class="btn btn-secondary">
+
+                                Copy Report
+
+                            </button>
+
+
+
                         </div>
+
+
+
                     </div>
+
+
+
+
                 </div>
+
+
             </section>
+
+
+
+
+
+
+
+
+
+            <!-- HISTORY -->
+
+
+            <section class="card glass-card result-card">
+
+
+                <div class="result-header">
+
+
+                    <h2>
+
+                        Verification History
+
+                    </h2>
+
+
+
+                    <button type="button" id="clear-history" class="btn btn-secondary">
+
+                        Clear History
+
+                    </button>
+
+
+                </div>
+
+
+
+
+
+
+                <div id="history-list">
+
+
+                    <p>
+
+                        No history yet
+
+                    </p>
+
+
+                </div>
+
+
+
+            </section>
+
+
+
+
+
+
+
+
         </main>
 
+
+
+
+
+
+
+
+
         <footer>
-            <p>&copy; 2026 FactShield AI. Built with scikit-learn & Flask. All data processed locally.</p>
+
+
+            <p>
+
+                © 2026 FactShield AI |
+                Machine Learning • Gemini AI • Real-Time Verification
+
+            </p>
+
+
         </footer>
+
+
+
+
+
     </div>
 
-    <script src="{{ url_for('static', filename='main.js') }}"></script>
+
+
+
+
+
+
+
+    <script src="{{ url_for('static', filename='main.js') }}?v=200"></script>
+
+
+
 </body>
+
+
 </html>

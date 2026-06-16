@@ -1,116 +1,531 @@
 import os
-import sys
 import re
 import pickle
+
 from flask import Flask, render_template, request, jsonify
+
+from fact_checker import verify_news
+from fact_database import local_fact_check
+
 
 app = Flask(__name__)
 
-# Global variables for model and vectorizer
+
+# =========================
+# GLOBAL OBJECTS
+# =========================
+
 model = None
 vectorizer = None
 
+
+
+# =========================
+# CLEAN TEXT
+# =========================
+
 def clean_text(text):
-    """
-    Mirrors the preprocessing pipeline used during training:
-    - Lowercase the text.
-    - Strip Reuters/location source prefixes to remove source bias.
-    - Remove special characters, punctuation, and digits.
-    - Normalize whitespace.
-    """
+
     if not isinstance(text, str):
         return ""
+
+
     text = text.lower()
-    text = re.sub(r'^.*?\b(reuters)\b\s*[-\u2014\u2013]+\s*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'^[a-z\s]{3,20}\s*[-\u2014\u2013]+\s*', '', text)
-    text = re.sub(r'[^a-zA-Z\s]', ' ', text)
-    text = re.sub(r'\s+', ' ', text).strip()
+
+
+    text = re.sub(
+        r"[^a-zA-Z\s]",
+        " ",
+        text
+    )
+
+
+    text = re.sub(
+        r"\s+",
+        " ",
+        text
+    ).strip()
+
+
     return text
 
+
+
+
+
+
+
+# =========================
+# LOAD ML MODEL
+# =========================
+
 def load_ml_assets():
-    global model, vectorizer
-    model_path = "model.pkl"
-    vector_path = "vector.pkl"
-    
-    if not os.path.exists(model_path) or not os.path.exists(vector_path):
-        print("[CRITICAL] Saved model.pkl or vector.pkl not found! Please run train.py first.")
-        return False
-        
-    try:
-        print("Loading serialized model and vectorizer...")
-        with open(model_path, "rb") as f_model:
-            model = pickle.load(f_model)
-        with open(vector_path, "rb") as f_vector:
-            vectorizer = pickle.load(f_vector)
-        print("Model and vectorizer loaded successfully.")
-        return True
-    except Exception as e:
-        print(f"[CRITICAL] Error loading ML assets: {e}")
-        return False
 
-@app.route('/')
+    global model
+    global vectorizer
+
+
+    try:
+
+
+        print(
+            "Loading ML model..."
+        )
+
+
+        with open(
+            "model.pkl",
+            "rb"
+        ) as f:
+
+            model = pickle.load(f)
+
+
+
+        with open(
+            "vector.pkl",
+            "rb"
+        ) as f:
+
+            vectorizer = pickle.load(f)
+
+
+
+        print(
+            "ML model loaded successfully"
+        )
+
+
+
+    except Exception as error:
+
+
+        print(
+            "ML loading error:",
+            error
+        )
+
+
+
+
+
+
+
+
+
+# =========================
+# HOME
+# =========================
+
+@app.route("/")
 def index():
-    return render_template('index.html')
 
-@app.route('/predict', methods=['POST'])
+
+    return render_template(
+        "index.html"
+    )
+
+
+
+
+
+
+
+
+
+# =========================
+# PREDICT API
+# =========================
+
+@app.route(
+    "/predict",
+    methods=["POST"]
+)
+
 def predict():
-    if model is None or vectorizer is None:
-        return jsonify({
-            'status': 'error',
-            'message': 'Model is not loaded on the server.'
-        }), 500
-        
-    try:
-        # Support both JSON payload and standard form data
-        if request.is_json:
-            data = request.get_json()
-            text_content = data.get('text', '').strip()
-        else:
-            text_content = request.form.get('text', '').strip()
-            
-        if not text_content:
-            return jsonify({
-                'status': 'error',
-                'message': 'Please enter some text to analyze.'
-            }), 400
-            
-        # 1. Apply the same preprocessing used during training
-        cleaned_text = clean_text(text_content)
-        
-        if not cleaned_text:
-            return jsonify({
-                'status': 'error',
-                'message': 'Text could not be processed after cleaning. Please provide more content.'
-            }), 400
-        
-        # 2. Transform the cleaned text using the loaded TF-IDF vectorizer
-        vectorized_text = vectorizer.transform([cleaned_text])
-        
-        # 3. Perform prediction
-        prediction_val = model.predict(vectorized_text)[0]
-        
-        # 4. Calculate probability/confidence score
-        probabilities = model.predict_proba(vectorized_text)[0]
-        confidence = probabilities[prediction_val]  # Probability of the predicted class
-        
-        # Determine label (1 = Fake, 0 = Real)
-        label = "Fake" if prediction_val == 1 else "Real"
-        
-        return jsonify({
-            'status': 'success',
-            'prediction': label,
-            'confidence': round(float(confidence) * 100, 2),
-            'text_preview': text_content[:100] + '...' if len(text_content) > 100 else text_content
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Prediction failed: {str(e)}'
-        }), 500
 
-# Load model when application starts
+
+    try:
+
+
+        data = request.get_json()
+
+
+        text_content = data.get(
+            "text",
+            ""
+        ).strip()
+
+
+
+        if not text_content:
+
+
+            return jsonify({
+
+                "status":
+                "error",
+
+                "message":
+                "Please enter news"
+
+            })
+
+
+
+
+
+
+
+        # =====================
+        # LOCAL FACT DATABASE
+        # =====================
+
+
+        local_result = local_fact_check(
+            text_content
+        )
+
+
+
+        if local_result:
+
+
+            upper = local_result.upper()
+
+
+
+            if "STATUS: FAKE" in upper:
+
+                prediction = "Fake"
+
+
+            elif "STATUS: REAL" in upper:
+
+                prediction = "Real"
+
+
+            else:
+
+                prediction = "Uncertain"
+
+
+
+
+            return jsonify({
+
+
+                "status":
+                "success",
+
+
+                "prediction":
+                prediction,
+
+
+                "confidence":
+                100,
+
+
+                "verification_mode":
+                "Local Fact Database",
+
+
+                "ai_verification":
+                local_result
+
+            })
+
+
+
+
+
+
+
+
+
+        # =====================
+        # GEMINI CHECK
+        # =====================
+
+
+        ai_result = verify_news(
+            text_content
+        )
+
+
+        upper_ai = ai_result.upper()
+
+
+
+
+
+
+        if "STATUS: FAKE" in upper_ai:
+
+
+            return jsonify({
+
+                "status":
+                "success",
+
+                "prediction":
+                "Fake",
+
+                "confidence":
+                95,
+
+                "verification_mode":
+                "Gemini Live Verification",
+
+                "ai_verification":
+                ai_result
+
+            })
+
+
+
+
+
+
+        elif "STATUS: REAL" in upper_ai:
+
+
+            return jsonify({
+
+                "status":
+                "success",
+
+                "prediction":
+                "Real",
+
+                "confidence":
+                95,
+
+                "verification_mode":
+                "Gemini Live Verification",
+
+                "ai_verification":
+                ai_result
+
+            })
+
+
+
+
+
+
+        elif "STATUS: UNCERTAIN" in upper_ai:
+
+
+            return jsonify({
+
+                "status":
+                "success",
+
+                "prediction":
+                "Uncertain",
+
+                "confidence":
+                50,
+
+                "verification_mode":
+                "Gemini Live Verification",
+
+                "ai_verification":
+                ai_result
+
+            })
+
+
+
+
+
+
+
+
+
+
+
+        # =====================
+        # ML BACKUP
+        # =====================
+
+
+        if model is None or vectorizer is None:
+
+
+            return jsonify({
+
+                "status":
+                "error",
+
+                "message":
+                "ML model unavailable"
+
+            })
+
+
+
+
+
+        cleaned = clean_text(
+            text_content
+        )
+
+
+        vector = vectorizer.transform(
+            [cleaned]
+        )
+
+
+
+        output = model.predict(
+            vector
+        )[0]
+
+
+
+        probability = model.predict_proba(
+            vector
+        )[0]
+
+
+
+        confidence = (
+            probability[output]
+            *
+            100
+        )
+
+
+
+        if confidence > 90:
+
+            confidence = 90
+
+
+
+
+        if output == 1:
+
+            prediction = "Fake"
+
+
+        else:
+
+            prediction = "Real"
+
+
+
+
+
+
+        report = f"""
+
+STATUS: {prediction.upper()}
+
+CONFIDENCE: {round(confidence,2)}%
+
+CATEGORY:
+Offline Machine Learning
+
+EXPLANATION:
+Live AI verification unavailable.
+
+FactShield used backup detection system.
+
+SYSTEM:
+TF-IDF + Logistic Regression
+
+"""
+
+
+
+
+
+        return jsonify({
+
+
+            "status":
+            "success",
+
+
+            "prediction":
+            prediction,
+
+
+            "confidence":
+            round(
+                confidence,
+                2
+            ),
+
+
+            "verification_mode":
+            "Offline ML Backup",
+
+
+            "ai_verification":
+            report
+
+
+        })
+
+
+
+
+
+
+
+
+
+
+    except Exception as error:
+
+
+        return jsonify({
+
+            "status":
+            "error",
+
+            "message":
+            str(error)
+
+        })
+
+
+
+
+
+
+
+
+
+
+# =========================
+# START
+# =========================
+
 load_ml_assets()
 
-if __name__ == '__main__':
-    app.run()
+
+
+if __name__ == "__main__":
+
+
+    port = int(
+        os.environ.get(
+            "PORT",
+            5000
+        )
+    )
+
+
+    app.run(
+
+        host="0.0.0.0",
+
+        port=port
+
+    )
