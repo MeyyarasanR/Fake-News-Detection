@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 import google.generativeai as genai
 
 
+
 # =========================
-# Load Environment
+# LOAD ENVIRONMENT
 # =========================
 
 load_dotenv()
@@ -17,44 +18,97 @@ api_key = os.getenv(
 )
 
 
-if not api_key:
 
-    raise Exception(
-        "GEMINI_API_KEY missing"
+# =========================
+# GEMINI SETUP
+# =========================
+
+gemini_model = None
+
+
+try:
+
+
+    if api_key:
+
+
+        genai.configure(
+            api_key=api_key
+        )
+
+
+        gemini_model = genai.GenerativeModel(
+            "gemini-1.5-flash"
+        )
+
+
+        print(
+            "Gemini AI loaded successfully"
+        )
+
+
+    else:
+
+
+        print(
+            "Gemini API key not found"
+        )
+
+
+
+except Exception as e:
+
+
+    print(
+        "Gemini loading error:",
+        e
     )
 
 
 
-# =========================
-# Gemini Configure
-# =========================
-
-genai.configure(
-
-    api_key=api_key
-
-)
-
-
-
-model = genai.GenerativeModel(
-
-    "gemini-1.5-flash"
-
-)
-
-
-
 
 
 
 
 
 # =========================
-# Verify News Function
+# VERIFY NEWS
 # =========================
 
 def verify_news(news):
+
+
+
+    if gemini_model is None:
+
+
+        return """
+
+STATUS: ERROR
+
+CONFIDENCE: 0%
+
+CATEGORY:
+Gemini Configuration
+
+
+EXPLANATION:
+Gemini AI is not available.
+Using local ML backup.
+
+
+CORRECT INFORMATION:
+Unavailable.
+
+
+LATEST VERIFIED INFORMATION:
+Unavailable.
+
+"""
+
+
+
+
 
 
     prompt = f"""
@@ -62,106 +116,37 @@ def verify_news(news):
 
 You are FactShield AI.
 
-You are an advanced real-time
-fact verification system.
+You are a real-time fact verification system.
 
 
-Your job:
+Check whether the user claim is:
 
-Check whether the user information
-is REAL or FAKE using latest facts.
+REAL
 
+FAKE
 
-You must verify:
-
-1. Tamil Nadu
-- Chief Minister
-- Ministers
-- Political parties
-- Elections
-- Government orders
-- Holidays
-- Local announcements
+UNCERTAIN
 
 
-2. India
-- Prime Minister
+
+Verify:
+
+- Politics
 - Government
-- Parliament
-- Supreme Court
-- RBI
-- ISRO
+- Health
+- Science
+- Technology
+- Sports
+- Education
+- Viral social media claims
 
-
-3. World
-- Leaders
-- Countries
-- International events
-
-
-4. Health
-- Diseases
-- Medicines
-- Treatments
-- Medical claims
-
-
-5. Science
-- Space
-- NASA
-- ISRO
-- Research
-
-
-6. Technology
-- AI
-- Cyber security
-- Companies
-
-
-7. Sports
-- Cricket
-- Olympics
-- Records
-
-
-8. Education
-- Exams
-- Universities
-
-
-9. Viral Messages
-- WhatsApp forwards
-- Social media rumours
-
-
-
-IMPORTANT:
-
-Never check grammar.
-
-Never judge by writing style.
-
-Only verify the FACT.
 
 
 Rules:
 
+Do not check grammar.
 
-Correct information:
-
-STATUS: REAL
-
-
-Wrong information:
-
-STATUS: FAKE
-
-
-Not enough proof:
-
-STATUS: UNCERTAIN
-
+Verify only facts.
 
 
 USER CLAIM:
@@ -174,7 +159,7 @@ USER CLAIM:
 \"\"\"
 
 
-Reply only:
+Reply exactly:
 
 
 STATUS:
@@ -198,10 +183,14 @@ LATEST VERIFIED INFORMATION:
 """
 
 
+
+
+
     try:
 
 
-        response = model.generate_content(
+
+        response = gemini_model.generate_content(
 
 
             prompt,
@@ -209,12 +198,15 @@ LATEST VERIFIED INFORMATION:
 
             generation_config={
 
+
                 "temperature": 0.0
+
 
             }
 
 
         )
+
 
 
         return response.text
@@ -223,7 +215,11 @@ LATEST VERIFIED INFORMATION:
 
 
 
+
+
+
     except Exception as error:
+
 
 
         error_text = str(error)
@@ -231,7 +227,6 @@ LATEST VERIFIED INFORMATION:
 
 
 
-        # Gemini quota limit
 
         if (
 
@@ -241,7 +236,12 @@ LATEST VERIFIED INFORMATION:
 
             "RESOURCE_EXHAUSTED" in error_text
 
+            or
+
+            "quota" in error_text.lower()
+
         ):
+
 
 
             return """
@@ -255,18 +255,19 @@ Gemini API Limit
 
 
 EXPLANATION:
-Your Gemini free API request limit is finished.
-FactShield AI is working correctly.
+Gemini request limit finished.
+FactShield will continue using ML backup.
 
 
 CORRECT INFORMATION:
-Unable to verify now because API quota ended.
+Unable to verify using Gemini now.
 
 
 LATEST VERIFIED INFORMATION:
-Gemini verification temporarily unavailable.
+Try again after quota reset.
 
 """
+
 
 
 
@@ -279,7 +280,7 @@ STATUS: ERROR
 CONFIDENCE: 0%
 
 CATEGORY:
-System Error
+Gemini Error
 
 
 EXPLANATION:
@@ -288,7 +289,7 @@ EXPLANATION:
 
 
 CORRECT INFORMATION:
-Unable to check.
+Unavailable.
 
 
 LATEST VERIFIED INFORMATION:
